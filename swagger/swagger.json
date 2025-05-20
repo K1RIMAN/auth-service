@@ -1,0 +1,325 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Auth Service API",
+    "description": "Сервис аутентификации с использованием JWT токенов",
+    "version": "1.0",
+    "contact": {
+      "name": "API Support"
+    },
+    "license": {
+      "name": "MIT"
+    }
+  },
+  "host": "localhost:8080",
+  "basePath": "/",
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "auth"
+        ],
+        "summary": "Получение токенов пользователя",
+        "description": "Получение пары токенов (access и refresh) для указанного ID пользователя",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "ID пользователя (GUID)",
+            "name": "user_id",
+            "in": "query",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Успешный ответ",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "example": "success"
+                },
+                "data": {
+                  "$ref": "#/definitions/TokenPair"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Некорректный запрос",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            },
+            "examples": {
+              "application/json": {
+                "status": "error",
+                "error_code": "INVALID_REQUEST",
+                "error_message": "отсутствует параметр user_id"
+              }
+            }
+          },
+          "500": {
+            "description": "Внутренняя ошибка сервера",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            },
+            "examples": {
+              "application/json": {
+                "status": "error",
+                "error_code": "INTERNAL_ERROR",
+                "error_message": "ошибка при генерации токенов"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "auth"
+        ],
+        "summary": "Обновление токенов",
+        "description": "Обновление пары токенов (access и refresh) с использованием refresh токена",
+        "parameters": [
+          {
+            "description": "Refresh токен",
+            "name": "request",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "refresh_token"
+              ],
+              "properties": {
+                "refresh_token": {
+                  "type": "string",
+                  "description": "Refresh токен в формате base64"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Успешный ответ",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "example": "success"
+                },
+                "data": {
+                  "$ref": "#/definitions/TokenPair"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Некорректный запрос",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            },
+            "examples": {
+              "application/json": {
+                "status": "error",
+                "error_code": "INVALID_REQUEST",
+                "error_message": "отсутствует параметр refresh_token"
+              }
+            }
+          },
+          "401": {
+            "description": "Невалидный refresh токен или неправильный User-Agent",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            },
+            "examples": {
+              "application/json": {
+                "status": "error",
+                "error_code": "INVALID_REFRESH_TOKEN",
+                "error_message": "невалидный refresh токен"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "auth"
+        ],
+        "summary": "Деавторизация пользователя",
+        "description": "Деавторизует пользователя, после чего его токены становятся недействительными",
+        "responses": {
+          "200": {
+            "description": "Успешная деавторизация",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "example": "success"
+                },
+                "message": {
+                  "type": "string",
+                  "example": "пользователь успешно деавторизован"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Не авторизован",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            },
+            "examples": {
+              "application/json": {
+                "status": "error",
+                "error_code": "UNAUTHORIZED",
+                "error_message": "пользователь не авторизован"
+              }
+            }
+          },
+          "500": {
+            "description": "Внутренняя ошибка сервера",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            },
+            "examples": {
+              "application/json": {
+                "status": "error",
+                "error_code": "INTERNAL_ERROR",
+                "error_message": "ошибка при деавторизации пользователя"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/me": {
+      "get": {
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "auth"
+        ],
+        "summary": "Получение ID текущего пользователя",
+        "description": "Получение ID пользователя, которому принадлежит текущий access токен",
+        "responses": {
+          "200": {
+            "description": "ID пользователя",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "example": "success"
+                },
+                "data": {
+                  "$ref": "#/definitions/UserResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Не авторизован",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            },
+            "examples": {
+              "application/json": {
+                "status": "error",
+                "error_code": "UNAUTHORIZED",
+                "error_message": "пользователь не авторизован"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "BearerAuth": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header"
+    }
+  },
+  "definitions": {
+    "ErrorResponse": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "example": "error"
+        },
+        "error_code": {
+          "type": "string",
+          "example": "INVALID_REQUEST"
+        },
+        "error_message": {
+          "type": "string",
+          "example": "некорректный запрос"
+        }
+      }
+    },
+    "TokenPair": {
+      "type": "object",
+      "properties": {
+        "access_token": {
+          "type": "string",
+          "example": "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiYTc5N2M3NzItZWZiMS00MmQ0LTllZGUtYzFiYTQ2ZjZkOWU0IiwiZXhwIjoxNjE5MDk2MzE0LCJpYXQiOjE2MTkwOTU0MTR9.3nFNx5VrH9qk6eJ6yQdwUK8YhEXzSMIwK-P2FdwZxK3TY06qA_t1xwIbZGQI-Z-7vQRXfcpZCM2NF7Y-Qj8WRg"
+        },
+        "refresh_token": {
+          "type": "string",
+          "example": "MTIzNDU2Nzg5MA=="
+        }
+      }
+    },
+    "UserResponse": {
+      "type": "object",
+      "properties": {
+        "user_id": {
+          "type": "string",
+          "example": "a797c772-efb1-42d4-9ede-c1ba46f6d9e4"
+        }
+      }
+    }
+  }
+} 
